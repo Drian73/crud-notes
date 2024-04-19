@@ -87,33 +87,118 @@ class NoteList extends StatelessWidget {
           if (snapshot.hasError) {
             return new Text('Error: ${snapshot.error}');
           }
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: snapshot.data.docs.map((document) {
-              return Card(
-                child: ListTile(
-                  title: Text(document['title']),
-                  subtitle: Text(document['description']),
-                  trailing: InkWell(
-                    onTap: () {
-                      FirebaseFirestore.instance
-                          .collection('notes')
-                          .doc(document.id)
-                          .delete()
-                          .catchError((e) {
-                        print(e);
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      child: const Icon(Icons.delete),
-                    ),
-                  ),
-                ),
+          switch (snapshot.connectionState) {
+            case ConnectionState.waiting:
+              return const Center(
+                child: CircularProgressIndicator(),
               );
-            }),
-          );
+            default:
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 80),
+                children: snapshot.data!.docs.map((document) {
+                  return Card(
+                    child: ListTile(
+                      onTap: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              TextEditingController titleController =
+                                  TextEditingController(
+                                      text: document['title']);
+                              TextEditingController descriptionController =
+                                  TextEditingController(
+                                      text: document['description']);
+                              return AlertDialog(
+                                title: const Text('Update Notes'),
+                                content: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Title',
+                                        textAlign: TextAlign.start),
+                                    TextField(
+                                      controller: titleController,
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 20),
+                                      child: Text('Description',
+                                          textAlign: TextAlign.start),
+                                    ),
+                                    TextField(
+                                      controller: descriptionController,
+                                    )
+                                  ],
+                                ),
+                                actions: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10),
+                                    child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text('Cancel')),
+                                  ),
+                                  ElevatedButton(
+                                      onPressed: () {
+                                        Map<String, dynamic> updateNote =
+                                            new Map<String, dynamic>();
+                                        updateNote['title'] =
+                                            titleController.text;
+                                        updateNote['description'] =
+                                            descriptionController.text;
+
+                                        FirebaseFirestore.instance
+                                            .collection('notes')
+                                            .doc(document.id)
+                                            .update(updateNote)
+                                            .whenComplete(() {
+                                          Navigator.of(context).pop();
+                                        });
+                                      },
+                                      child: Text('Update'))
+                                ],
+                              );
+                            });
+                      },
+                      title: Text(document['title']),
+                      subtitle: Text(document['description']),
+                      trailing: InkWell(
+                        onTap: () {
+                          showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Delete Notes??'),
+                                  actions: [
+                                    ElevatedButton(onPressed: () {
+                                      FirebaseFirestore.instance
+                                          .collection('notes')
+                                          .doc(document.id)
+                                          .delete()
+                                          .whenComplete(() {
+                                            Navigator.of(context).pop();
+                                          });
+                                    },
+                                    child: Text('Yes')),
+                                    ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text('No')),
+                                  ],
+                                );
+                              });
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: Icon(Icons.delete),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+          }
         });
   }
 }
