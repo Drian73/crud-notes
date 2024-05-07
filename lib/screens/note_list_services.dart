@@ -44,10 +44,10 @@ class NoteList extends StatelessWidget {
     return StreamBuilder(
         stream: NoteService.getNoteList(), //jika menggunakan stream (2)
         // return FutureBuilder(
-        //     future: NoteService.retrieveNote(),
+        //     future: NoteService.retrieveNote(), //jika menggunakan future
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return new Text('Error: ${snapshot.error}');
+            return Text('Error: ${snapshot.error}');
           }
           switch (snapshot.connectionState) {
             case ConnectionState.waiting:
@@ -68,8 +68,8 @@ class NoteList extends StatelessWidget {
                               return NoteDialog(note: document);
                             });
                       },
-                      title: Text(document['title']),
-                      subtitle: Text(document['description']),
+                      title: Text(document.title),
+                      subtitle: Text(document.description),
                       trailing: InkWell(
                         onTap: () {
                           showDialog(
@@ -80,7 +80,7 @@ class NoteList extends StatelessWidget {
                                   actions: [
                                     ElevatedButton(
                                         onPressed: () {
-                                          NoteService.deleteNote(document['id'])
+                                          NoteService.deleteNote(document)
                                               .whenComplete(() =>
                                                   Navigator.of(context).pop());
                                         },
