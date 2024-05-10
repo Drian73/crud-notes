@@ -1,23 +1,46 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:notes/models/note.dart';
 import '../services/note_service.dart';
 
-class NoteDialog extends StatelessWidget {
+class NoteDialog extends StatefulWidget {
   final Note? note;
+
+  const NoteDialog({super.key, this.note});
+
+  @override
+  State<NoteDialog> createState() => _NoteDialogState();
+}
+
+class _NoteDialogState extends State<NoteDialog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  File? _imageFile;
 
-  NoteDialog({super.key, this.note}) {
-    if (note != null) {
-      _titleController.text = note!.title;
-      _descriptionController.text = note!.description;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.note != null) {
+      _titleController.text = widget.note!.title;
+      _descriptionController.text = widget.note!.description;
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(note == null ? 'Add Note' : 'Update Note'),
+      title: Text(widget.note == null ? 'Add Note' : 'Update Note'),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,7 +54,13 @@ class NoteDialog extends StatelessWidget {
           ),
           TextField(
             controller: _descriptionController,
-          )
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 20),
+            child: Text('Image', textAlign: TextAlign.start),
+          ),
+          _imageFile != null ? Image.file(_imageFile!) : Container(),
+          TextButton(onPressed: _pickImage, child: const Text('Pick Image'))
         ],
       ),
       actions: [
@@ -44,22 +73,30 @@ class NoteDialog extends StatelessWidget {
               child: Text('Cancel')),
         ),
         ElevatedButton(
-            onPressed: () {
-              if (note == null) {
-                NoteService.addNote(Note(
-                  title: _titleController.text, description: _descriptionController.text))
-                    .whenComplete(() {
+            onPressed: () async {
+              String? imageUrl;
+              if (_imageFile != null) {
+                imageUrl = await NoteService.uploadImage(_imageFile!);
+              }
+              Note note = Note(
+                  id: widget.note!.id,
+                  title: _titleController.text,
+                  description: _descriptionController.text,
+                  imageUrl: imageUrl,
+                  createdAt: widget.note!.createdAt,
+                  updatedAt: widget.note!.updatedAt);
+
+              if (widget.note == null) {
+                NoteService.addNote(note).whenComplete(() {
                   Navigator.of(context).pop();
                 });
               } else {
-                NoteService.updateNote(Note(
-                  id: note!.id, title: _titleController.text, description: _descriptionController.text))
-                    .whenComplete(() {
+                NoteService.updateNote(note).whenComplete(() {
                   Navigator.of(context).pop();
                 });
               }
             },
-            child: Text(note == null ? 'Add' : 'Update'))
+            child: Text(widget.note == null ? 'Add' : 'Update'))
       ],
     );
   }

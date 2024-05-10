@@ -24,7 +24,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
           showDialog(
               context: context,
               builder: (context) {
-                return NoteDialog();
+                return const NoteDialog();
               });
         },
         tooltip: 'Add Note',
@@ -68,6 +68,11 @@ class NoteList extends StatelessWidget {
                               return NoteDialog(note: document);
                             });
                       },
+                      leading: document.imageUrl != null ? CircleAvatar(
+                        backgroundImage: NetworkImage(document.imageUrl!),) : 
+                        const CircleAvatar(backgroundColor: Colors.grey,
+                        child: Icon(Icons.image),),
+                        
                       title: Text(document.title),
                       subtitle: Text(document.description),
                       trailing: InkWell(
