@@ -59,7 +59,13 @@ class _NoteDialogState extends State<NoteDialog> {
             padding: EdgeInsets.only(top: 20),
             child: Text('Image', textAlign: TextAlign.start),
           ),
-          _imageFile != null ? Image.file(_imageFile!) : Container(),
+          Expanded(
+              child: _imageFile != null
+                  ? Image.file(_imageFile!, fit: BoxFit.cover)
+                  : (widget.note?.imageUrl != null &&
+                          Uri.parse(widget.note!.imageUrl!).isAbsolute)
+                      ? Image.network(widget.note!.imageUrl!, fit: BoxFit.cover)
+                      : Container()),
           TextButton(onPressed: _pickImage, child: const Text('Pick Image'))
         ],
       ),
@@ -77,23 +83,24 @@ class _NoteDialogState extends State<NoteDialog> {
               String? imageUrl;
               if (_imageFile != null) {
                 imageUrl = await NoteService.uploadImage(_imageFile!);
+              } else {
+                imageUrl = widget.note?.imageUrl;
               }
               Note note = Note(
-                  id: widget.note!.id,
+                  id: widget.note?.id,
                   title: _titleController.text,
                   description: _descriptionController.text,
                   imageUrl: imageUrl,
-                  createdAt: widget.note!.createdAt,
-                  updatedAt: widget.note!.updatedAt);
+                  createdAt: widget.note?.createdAt,);
 
               if (widget.note == null) {
-                NoteService.addNote(note).whenComplete(() {
-                  Navigator.of(context).pop();
-                });
+                NoteService.addNote(Note(
+                  title: _titleController.text,
+                  description: _descriptionController.text,
+                )).whenComplete(() { Navigator.of(context).pop();});
               } else {
-                NoteService.updateNote(note).whenComplete(() {
-                  Navigator.of(context).pop();
-                });
+                NoteService.updateNote(Note(id: widget.note!.id, title: _titleController.text, description: _descriptionController.text,
+                createdAt: widget.note!.createdAt)).whenComplete(() => Navigator.of(context).pop());
               }
             },
             child: Text(widget.note == null ? 'Add' : 'Update'))
