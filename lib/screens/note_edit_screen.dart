@@ -1,5 +1,6 @@
 import 'dart:io';
-
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,9 +21,10 @@ class NoteEditScreen extends StatefulWidget {
 class _NoteEditScreenState extends State<NoteEditScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  File? _imageFile;
+  XFile? _imageFile;
+  double? _latitude;
+  double? _longitude;
   Position? _currentPosition;
-  String? _currentAddress;
 
   @override
   void initState() {
@@ -30,6 +32,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     if (widget.note != null) {
       _titleController.text = widget.note!.title;
       _descriptionController.text = widget.note!.description;
+      _latitude = widget.note?.latitude;
+      _longitude = widget.note?.longitude;
     }
   }
 
@@ -38,7 +42,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _imageFile = pickedFile;
       });
     }
   }
@@ -48,6 +52,8 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     // final currentAddress = await LocationService.getAddressFromLatLng(_currentPosition!);
     setState(() {
       _currentPosition = currentPosition;
+      _latitude = currentPosition?.latitude;
+      _longitude = currentPosition?.longitude;
       // _currentAddress = currentAddress;
     });
   }
@@ -87,13 +93,34 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
               _imageFile != null
                   ? AspectRatio(
                       aspectRatio: 16 / 9,
-                      child: Image.file(_imageFile!, fit: BoxFit.cover))
+                      child: kIsWeb
+                          ? CachedNetworkImage(
+                              imageUrl: _imageFile!.path,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                  child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Center(child: Icon(Icons.error)),
+                            )
+                          : Image.file(
+                              File(_imageFile!.path),
+                              fit: BoxFit.cover,
+                            ))
                   : (widget.note?.imageUrl != null &&
                           Uri.parse(widget.note!.imageUrl!).isAbsolute
                       ? AspectRatio(
                           aspectRatio: 16 / 9,
-                          child: Image.network(widget.note!.imageUrl!,
-                              fit: BoxFit.cover))
+                          child: CachedNetworkImage(
+                            imageUrl: widget.note!.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(Icons.error),
+                            ),
+                          ),
+                        )
                       : Container()),
               TextButton(
                 onPressed: _pickImage,
@@ -103,50 +130,53 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
                 onPressed: _pickLocation,
                 child: const Text('Get Current Location'),
               ),
-              Text('LAT: ${_currentPosition?.latitude ?? ""}'),
-              Text('LNG: ${_currentPosition?.longitude ?? ""}'),
-              // Text('ADDRESS: ${_currentAddress ?? ""}'),
-          
+              Text('Current Position: ${_latitude != null && _longitude != null ? '$_latitude, $_longitude' : 'Belum ada data lokasi'}',
+              textAlign: TextAlign.start,),
+
               const SizedBox(
                 height: 32,
               ),
-          
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Cancel'),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  String? imageUrl;
-                  if (_imageFile != null) {
-                    imageUrl = await NoteService.uploadImage(_imageFile!);
-                  } else {
-                    imageUrl = widget.note?.imageUrl;
-                  }
-                  Note note = Note(
-                    id: widget.note?.id,
-                    title: _titleController.text,
-                    description: _descriptionController.text,
-                    imageUrl: imageUrl,
-                    latitude: _currentPosition?.latitude,
-                    longitude: _currentPosition?.longitude,
-                    createdAt: widget.note?.createdAt,
-                  );
-          
-                  if (widget.note == null) {
-                    NoteService.addNote(note)
-                        .whenComplete(() => Navigator.of(context).pop());
-                  } else {
-                    NoteService.updateNote(note)
-                        .whenComplete(() => Navigator.of(context).pop());
-                  }
-                },
-                child: Text(widget.note == null ? 'Add' : 'Update'),
+
+              Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      String? imageUrl;
+                      if (_imageFile != null) {
+                        imageUrl = await NoteService.uploadImage(_imageFile!);
+                      } else {
+                        imageUrl = widget.note?.imageUrl;
+                      }
+                      Note note = Note(
+                        id: widget.note?.id,
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        imageUrl: imageUrl,
+                        latitude: _latitude,
+                        longitude: _longitude,
+                        createdAt: widget.note?.createdAt,
+                      );
+                  
+                      if (widget.note == null) {
+                        NoteService.addNote(note)
+                            .whenComplete(() => Navigator.of(context).pop());
+                      } else {
+                        NoteService.updateNote(note)
+                            .whenComplete(() => Navigator.of(context).pop());
+                      }
+                    },
+                    child: Text(widget.note == null ? 'Add' : 'Update'),
+                  ),
+                ],
               ),
             ],
           ),
