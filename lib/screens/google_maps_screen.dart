@@ -67,6 +67,7 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
         label: const Text('To the location!'),
         icon: const Icon(Icons.directions_car),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 

@@ -122,8 +122,8 @@ class NoteList extends StatelessWidget {
                                                             document.latitude!,
                                                         longitude: document
                                                             .longitude!)));
-                                        _launchMaps(document.latitude!,
-                                            document.longitude!);
+                                        // _launchMaps(document.latitude!,
+                                        //     document.longitude!);
                                       }
                                     : null, // Disable the button if latitude or longitude is null
                               ),
